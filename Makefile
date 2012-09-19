@@ -22,6 +22,7 @@ EMR						= elastic-mapreduce
 CLUSTERSIZE				= 2
 REGION                  = us-east
 KEY						= normal
+KEYPATH			= ~/.ssh/normal.pem
 
 # 
 # make targets 
@@ -32,6 +33,8 @@ help:
 	@echo "make create           - create an EMR Cluster with default settings (2 x c1.medium)"
 	@echo "make destroy          - clean up everything (terminate cluster and remove s3 bucket)"
 	@echo "make ssh              - log into head node of cluster"
+	@echo "make socksproxy	     - use ssh to create a ssh tunnel"
+	@echo "make sshproxy	     - use ssh to create a tunnel on port 11000 (for oozie)"
 
 
 #
@@ -64,6 +67,7 @@ create: bootstrap
 	${EMR} elastic-mapreduce --create --alive --name "$(USER)'s sample oozie Cluster" \
 	--num-instances ${CLUSTERSIZE} \
 	--instance-type c1.medium  \
+	--ami-version 2.1.4 \
 	--bootstrap-action s3://elasticmapreduce/bootstrap-actions/configure-hadoop \
 	--args "-c,hadoop.proxyuser.oozie.hosts=*,-c,hadoop.proxyuser.oozie.groups=*,-h,dfs.permissions=false" \
 	--bootstrap-action s3://${USER}.oozie.emr/config/config-oozie.sh | cut -d " " -f 4 > ./jobflowid
@@ -83,4 +87,13 @@ logs:
 ssh:
 	${EMR} -j `cat ./jobflowid` --ssh
 
+
+sshproxy:
+	j=`cat ./jobflowid`; h=`${EMR} --describe -j $$j | grep "MasterPublicDnsName" | cut -d "\"" -f 4`; echo "h=$$h"; if [ -z "$$h" ]; then echo "master not provisioned"; exit 1; fi
+	j=`cat ./jobflowid`; h=`${EMR} --describe $$j | grep "MasterPublicDnsName" | cut -d "\"" -f 4`; ssh -L 11000:localhost:11000 -i ${KEYPATH} hadoop@$$h
+
+
+socksproxy:
+	j=`cat ./jobflowid`; h=`${EMR} --describe -j $$j | grep "MasterPublicDnsName" | cut -d "\"" -f 4`; echo "h=$$h"; if [ -z "$$h" ]; then echo "master not provisioned"; exit 1; fi
+	j=`cat ./jobflowid`; h=`${EMR} --describe $$j | grep "MasterPublicDnsName" | cut -d "\"" -f 4`; ssh -D 8888 -i ${KEYPATH} hadoop@$$h
 
