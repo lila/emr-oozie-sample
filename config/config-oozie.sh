@@ -51,6 +51,7 @@ then
 	# copy emr jars to oozie webapp
 	#
 	sudo sh -c "sudo -u oozie sh -c 'cp /home/hadoop/lib/* /opt/oozie-3.1.3-incubating/oozie-server/lib'"
+	sudo sh -c "sudo -u oozie sh -c 'cp /home/hadoop/*.jar /opt/oozie-3.1.3-incubating/oozie-server/lib'"
 
 	#
 	# startup oozie 
