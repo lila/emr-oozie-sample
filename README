@@ -44,18 +44,61 @@ the oozie software is installed in /opt/oozie...
 the oozie-server, a web-based console, is running on port 11000.  once you create the cluster, you can set up a
 ssh tunnel (using % make sshproxy) then open a web browser to http://localhost:11000.  
 
+% make sshproxy
+
+(runs the ssh command that sets a local tunnel)
+
+% make socksproxy
+
+(runns an ssh command with a socks proxy.  then configure your local browser to use a v4 socks proxy as localhost port 8888)
+
+
 To submit a job, you can use the commandline oozie tool in /opt/oozie.../bin/ozzie
 
-for example, 
-oozie@ip-10-145-160-115:/opt/oozie-3.1.3-incubating$ ./bin/oozie job  -oozie http://localhost:11000/oozie -config  ./examples/apps/map-reduce/job.properties -run run
+for example (once logged into the head node)::
 
-to do this, you have to push the examples into local hdfs, and configure the job.properties as follows:
-nameNode=hdfs://localhost:9000
-jobTracker=localhost:9100
+# change user to user oozie
+% sudo bash
+% su - oozie
+
+# untar the examples and copy them to hdfs
+% cd /opt/oozie-3.1.3-incubating/
+% tar -zxvf oozie-examples.tar.gz
+% . /home/hadoop/.bashrc
+% hadoop fs -mkdir /user/oozie/
+% hadoop fs -put examples /user/oozie/
+
+# edit the job.properties file for sample application
+% vi examples/apps/map-reduce/job.properties
+
+Here is what I used, for name node, look in /home/hadoop/conf/core-site.xml, 
+and for the jobTracker look in /home/hadoop/conf/mapred-site.xml
+
+nameNode=hdfs://10.245.53.236:9000
+jobTracker=10.245.53.236:9001
 queueName=default
 examplesRoot=examples
 
-(you can find the details of the hadoop configuration in /home/hadoop/conf).
+
+# now run the job
+% ./bin/oozie job  -oozie http://localhost:11000/oozie -config
+./examples/apps/map-reduce/job.properties -run
+job: 0000001-120927170547709-oozie-oozi-W
+
+Now you can use the oozie web console, or the hadoop job tracker console to track the job.
+
+from the commandline:
+oozie@ip-10-245-53-236:/opt/oozie-3.1.3-incubating$ hadoop fs -get /user/oozie/examples/output-data/map-reduce/part-00000 .
+oozie@ip-10-245-53-236:/opt/oozie-3.1.3-incubating$ more part-00000 
+0	To be or not to be, that is the question;
+42	Whether 'tis nobler in the mind to suffer
+84	The slings and arrows of outrageous fortune,
+129	Or to take arms against a sea of troubles,
+172	And by opposing, end them. To die, to sleep;
+217	No more; and by a sleep to say we end
+...
+
+
 
 
 
@@ -72,6 +115,7 @@ docs for bootstrap actions
 http://incubator.apache.org/oozie/docs/3.1.3/docs/DG_QuickStart.html  - oozie documentation for install
 
 http://aws.amazon.com/developertools/2264  - emr commandline tools
+
 
 http://s3tools.org/download - s3cmd commandline tools 
 
